@@ -1,105 +1,116 @@
-/* styles.css - Injected save button styles for ChatGPT, Claude, and Grok */
+/* styles.css - Injected FAB styles for AI chat pages */
 
-.promptserver-save-btn {
-  display: inline-flex;
+#promptserver-global-fab {
+  position: fixed;
+  top: 50%;
+  right: 40px;
+  transform: translateY(-50%);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgb(25, 26, 32);
-  color: rgb(226, 227, 233);
-  border: 1px solid rgb(50, 52, 65);
-  border-radius: 20px;
-  padding: 6px 12px;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
+  border: none;
   cursor: pointer;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 999999;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   outline: none;
   user-select: none;
-  line-height: 1;
 }
 
-.promptserver-save-btn:hover {
+/* Locked state (no text selected) */
+#promptserver-global-fab.locked {
   background-color: rgb(35, 37, 46);
-  border-color: rgb(139, 92, 246); /* PromptServer primary purple glow */
-  color: #ffffff;
-  box-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
-}
-
-.promptserver-save-btn:active {
-  transform: scale(0.95);
-}
-
-.promptserver-save-btn:disabled {
+  color: rgb(156, 163, 175); /* Colorless / gray */
   opacity: 0.6;
-  cursor: not-allowed;
+}
+
+#promptserver-global-fab.locked:hover {
+  opacity: 0.9;
+  transform: translateY(-50%) scale(1.05);
+}
+
+#promptserver-global-fab.locked:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+/* Ready state (text selected) */
+#promptserver-global-fab.ready {
+  background-color: rgb(139, 92, 246); /* Purple glow */
+  color: #ffffff;
+  opacity: 1;
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+  animation: promptserver-pulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+#promptserver-global-fab.ready:hover {
+  transform: translateY(-50%) scale(1.1);
+  background-color: rgb(124, 58, 237);
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.7);
+}
+
+#promptserver-global-fab.ready:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+@keyframes promptserver-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7); }
+  70% { box-shadow: 0 0 0 15px rgba(139, 92, 246, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
 }
 
 /* Success state when saved */
-.promptserver-save-btn.success {
-  background-color: rgba(16, 185, 129, 0.1) !important;
-  color: #34d399 !important;
-  border-color: #10b981 !important;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+#promptserver-global-fab.success {
+  background-color: #10b981 !important;
+  color: #ffffff;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.5) !important;
+  animation: none;
+  transform: translateY(-50%) scale(1.1);
 }
 
 /* Error state when failed */
-.promptserver-save-btn.error {
-  background-color: rgba(239, 68, 68, 0.1) !important;
-  color: #f87171 !important;
-  border-color: #ef4444 !important;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+#promptserver-global-fab.error {
+  background-color: #ef4444 !important;
+  color: #ffffff;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.5) !important;
+  animation: none;
+  transform: translateY(-50%);
 }
 
-/* Adjust light theme adaptations for OpenAI light mode */
-@media (prefers-color-scheme: light) {
-  /* Only target light theme if the site does not force dark mode */
-  .promptserver-save-btn {
-    background-color: #ffffff;
-    color: #475569;
-    border-color: #e2e8f0;
-  }
-  .promptserver-save-btn:hover {
-    background-color: #f8fafc;
-    border-color: #7c3aed;
-    color: #0f172a;
-    box-shadow: 0 0 10px rgba(124, 58, 237, 0.2);
-  }
+/* Tooltip for feedback messages */
+.promptserver-fab-tooltip {
+  position: fixed;
+  bottom: 110px;
+  right: 40px;
+  background-color: rgb(25, 26, 32);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 999998;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgb(50, 52, 65);
 }
 
-/* History Mode Specific Styles */
-.promptserver-save-btn.history-mode {
-  position: absolute;
-  top: 8px;
-  right: -40px; /* Shift to the right of the message container */
-  padding: 6px;
-  border-radius: 50%; /* Make it circular */
-  opacity: 0; /* Hide by default */
-  transform: translateX(-10px);
-}
-
-/* Show button when hovering over the message container */
-*:hover > .promptserver-save-btn.history-mode,
-.promptserver-save-btn.history-mode:hover {
+.promptserver-fab-tooltip.show {
   opacity: 1;
-  transform: translateX(0);
+  transform: translateY(0);
 }
 
-.promptserver-save-btn.history-mode.saving,
-.promptserver-save-btn.history-mode.success,
-.promptserver-save-btn.history-mode.error {
-  opacity: 1;
-  transform: translateX(0);
+.promptserver-fab-tooltip.error {
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
-/* Selection Mode Specific Styles */
-.promptserver-save-btn.selection-mode {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(139, 92, 246, 0.3);
-  animation: promptserver-pop-up 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-@keyframes promptserver-pop-up {
-  0% { opacity: 0; transform: scale(0.9) translateY(5px); }
-  100% { opacity: 1; transform: scale(1) translateY(0); }
+.promptserver-fab-tooltip.success {
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.4);
 }
