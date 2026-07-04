@@ -18,27 +18,15 @@ function findUserMessages(source) {
     // Claude: Targets user messages
     messages = Array.from(document.querySelectorAll('.font-user-message'));
   } else if (source === 'grok') {
-    // Grok: Target message bubbles. Grok frequently changes class names.
-    // A common pattern is looking for the text container inside message rows.
-    // We will look for elements containing user text.
-    // As a fallback, we target generic message blocks.
-    messages = Array.from(document.querySelectorAll('.message-row.user-message, div[data-message-author-role="user"], .whitespace-pre-wrap:not(textarea)'));
-    // Filter out obvious non-user messages if possible, or just attach to all text blocks.
-    // For MVP, if we attach to AI messages too, it's not the end of the world, 
-    // but let's try to target right-aligned or specific user bubbles.
+    // Grok: Target specific user message wrappers to avoid hitting AI responses.
+    // User messages typically have specific attributes or right-aligned classes.
+    // We remove the overly broad .whitespace-pre-wrap to avoid AI text.
+    messages = Array.from(document.querySelectorAll('.message-row.user-message, div[data-message-author-role="user"]'));
   }
   
   // Fallback for any unknown or if specific selectors fail
   if (messages.length === 0) {
-    messages = Array.from(document.querySelectorAll('[data-message-author-role="user"], .user-message'));
-    
-    // Ultimate fallback for Grok/others: find paragraphs inside the main chat view
-    if (messages.length === 0) {
-       // Look for elements that have a lot of text but aren't inputs
-       const potentialTexts = Array.from(document.querySelectorAll('.whitespace-pre-wrap'));
-       // Filter out the main input box
-       messages = potentialTexts.filter(el => !el.closest('textarea') && !el.closest('form'));
-    }
+    messages = Array.from(document.querySelectorAll('[data-message-author-role="user"]'));
   }
   
   return messages;
@@ -135,4 +123,111 @@ function injectSaveButtonsToMessages() {
 
 // Polling interval to detect dynamically loaded messages as you chat
 const intervalId = setInterval(injectSaveButtonsToMessages, 1500);
-console.log('PromptServer Copilot content script active (History Mode).');
+
+// --- Text Selection Mode ---
+let selectionButton = null;
+
+// Use mouseup and keyup to reliably detect selection end
+function handleSelection() {
+  setTimeout(() => {
+    const selection = window.getSelection();
+    const text = selection.toString().trim();
+    
+    if (!text) {
+      if (selectionButton) selectionButton.style.display = 'none';
+      return;
+    }
+
+    if (!selectionButton) {
+      selectionButton = document.createElement('button');
+      selectionButton.className = 'promptserver-save-btn selection-mode';
+      selectionButton.title = 'Save selected prompt to Library';
+      selectionButton.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; vertical-align: middle;">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+          <polyline points="17 21 17 13 7 13 7 21"></polyline>
+          <polyline points="7 3 7 8 15 8"></polyline>
+        </svg>
+        <span>Save Selection</span>
+      `;
+      document.body.appendChild(selectionButton);
+      
+      // Prevent button click from clearing the selection immediately
+      selectionButton.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+      });
+
+      selectionButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const selectedText = window.getSelection().toString().trim();
+        if (!selectedText) return;
+        
+        const label = selectionButton.querySelector('span');
+        label.textContent = 'Saving...';
+        selectionButton.disabled = true;
+
+        chrome.runtime.sendMessage({
+          action: 'SAVE_PROMPT',
+          content: selectedText,
+          source: getSource()
+        }, (response) => {
+          selectionButton.disabled = false;
+          if (response && response.success) {
+            label.textContent = 'Saved!';
+            selectionButton.classList.add('success');
+            setTimeout(() => {
+              label.textContent = 'Save Selection';
+              selectionButton.classList.remove('success');
+              window.getSelection().removeAllRanges();
+              selectionButton.style.display = 'none';
+            }, 1500);
+          } else {
+            label.textContent = 'Failed';
+            selectionButton.classList.add('error');
+            setTimeout(() => {
+              label.textContent = 'Save Selection';
+              selectionButton.classList.remove('error');
+            }, 1500);
+          }
+        });
+      });
+    }
+    
+    // Position the button below the selection
+    try {
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      
+      // Only show if the selection is actually visible/valid
+      if (rect.width > 0 && rect.height > 0) {
+        selectionButton.style.display = 'inline-flex';
+        selectionButton.style.position = 'fixed';
+        selectionButton.style.top = \`\${rect.bottom + 10}px\`;
+        selectionButton.style.left = \`\${Math.max(10, rect.left + (rect.width / 2) - 60)}px\`;
+        selectionButton.style.zIndex = '999999';
+      }
+    } catch (e) {
+      selectionButton.style.display = 'none';
+    }
+  }, 10);
+}
+
+document.addEventListener('mouseup', handleSelection);
+document.addEventListener('keyup', (e) => {
+  if (e.key === 'Shift' || e.key.startsWith('Arrow')) {
+    handleSelection();
+  }
+});
+
+// Hide button when clicking outside
+document.addEventListener('mousedown', (e) => {
+  if (selectionButton && !selectionButton.contains(e.target)) {
+    // We don't hide immediately to allow selection to form,
+    // but if the user clicks away, the selectionchange/mouseup will handle it
+    // because window.getSelection() will be empty.
+  }
+});
+
+console.log('PromptServer Copilot content script active (History + Selection Mode).');

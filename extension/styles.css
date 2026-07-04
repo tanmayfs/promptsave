@@ -92,3 +92,14 @@
   opacity: 1;
   transform: translateX(0);
 }
+
+/* Selection Mode Specific Styles */
+.promptserver-save-btn.selection-mode {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(139, 92, 246, 0.3);
+  animation: promptserver-pop-up 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes promptserver-pop-up {
+  0% { opacity: 0; transform: scale(0.9) translateY(5px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
