@@ -12,19 +12,23 @@ function findUserMessages(source) {
   let messages = [];
   
   if (source === 'chatgpt') {
-    // ChatGPT: Targets the container for user messages
     messages = Array.from(document.querySelectorAll('[data-message-author-role="user"]'));
   } else if (source === 'claude') {
-    // Claude: Targets user messages
     messages = Array.from(document.querySelectorAll('.font-user-message'));
   } else if (source === 'grok') {
-    // Grok: Target specific user message wrappers to avoid hitting AI responses.
-    // User messages typically have specific attributes or right-aligned classes.
-    // We remove the overly broad .whitespace-pre-wrap to avoid AI text.
-    messages = Array.from(document.querySelectorAll('.message-row.user-message, div[data-message-author-role="user"]'));
+    // Grok heuristics: User messages are right-aligned. 
+    // AI responses are usually left-aligned and contain more complex markup.
+    // We'll target divs that contain text.
+    messages = Array.from(document.querySelectorAll('div.message-row, div[data-message-author-role="user"]'));
+    
+    if (messages.length > 0) {
+        // Try to filter for user messages specifically
+        // Often user messages are just text, so we can filter out rows that have "Copy" buttons
+        const userMessages = messages.filter(msg => !msg.innerText.includes('Copy') && !msg.innerText.includes('Share'));
+        if (userMessages.length > 0) messages = userMessages;
+    }
   }
   
-  // Fallback for any unknown or if specific selectors fail
   if (messages.length === 0) {
     messages = Array.from(document.querySelectorAll('[data-message-author-role="user"]'));
   }
@@ -33,9 +37,7 @@ function findUserMessages(source) {
 }
 
 function extractTextFromMessage(messageEl) {
-  // Clone to avoid modifying the actual DOM
   const clone = messageEl.cloneNode(true);
-  // Remove our injected button from the clone so its text isn't included
   const btns = clone.querySelectorAll('.promptserver-save-btn');
   btns.forEach(btn => btn.remove());
   
@@ -47,24 +49,16 @@ function injectSaveButtonsToMessages() {
   const messages = findUserMessages(source);
 
   messages.forEach(msgEl => {
-    // Skip if we already injected a button into this message
     if (msgEl.querySelector('.promptserver-save-btn')) return;
 
-    // Create the save button (small FAB style)
+    // Use pure DOM creation to avoid Trusted Types / innerHTML violations
     const button = document.createElement('button');
     button.className = 'promptserver-save-btn history-mode';
     button.title = 'Save prompt to Library';
     
-    // Floppy disk icon
-    button.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-        <polyline points="17 21 17 13 7 13 7 21"></polyline>
-        <polyline points="7 3 7 8 15 8"></polyline>
-      </svg>
-    `;
+    // Use an emoji to avoid SVG parsing issues with strict CSP
+    button.textContent = '💾';
 
-    // Ensure parent container can absolute-position the button if needed
     const msgStyle = window.getComputedStyle(msgEl);
     if (msgStyle.position === 'static') {
       msgEl.style.position = 'relative';
@@ -75,10 +69,7 @@ function injectSaveButtonsToMessages() {
       e.stopPropagation();
 
       const text = extractTextFromMessage(msgEl).trim();
-      if (!text) {
-        console.warn('PromptServer: No text found in message block.');
-        return;
-      }
+      if (!text) return;
 
       button.classList.add('saving');
       button.disabled = true;
@@ -93,44 +84,46 @@ function injectSaveButtonsToMessages() {
         
         if (response && response.success) {
           button.classList.add('success');
-          // Checkmark icon
-          button.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+          button.textContent = '✅';
           
           setTimeout(() => {
             button.classList.remove('success');
-            // Revert to floppy disk
-            button.innerHTML = `
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                <polyline points="7 3 7 8 15 8"></polyline>
-              </svg>
-            `;
+            button.textContent = '💾';
           }, 2000);
         } else {
           button.classList.add('error');
+          button.textContent = '❌';
           setTimeout(() => {
             button.classList.remove('error');
+            button.textContent = '💾';
           }, 2000);
         }
       });
     });
 
-    // Append the button to the message element
-    msgEl.appendChild(button);
+    try {
+      msgEl.appendChild(button);
+    } catch (err) {
+      console.warn("PromptServer: Failed to append button", err);
+    }
   });
 }
 
-// Polling interval to detect dynamically loaded messages as you chat
+// Polling interval to detect dynamically loaded messages
 const intervalId = setInterval(injectSaveButtonsToMessages, 1500);
 
 // --- Text Selection Mode ---
 let selectionButton = null;
 
-// Use mouseup and keyup to reliably detect selection end
 function handleSelection() {
   setTimeout(() => {
-    const selection = window.getSelection();
+    let selection;
+    try {
+        selection = window.getSelection();
+    } catch (err) {
+        return; // getSelection can fail in some strict iframe contexts
+    }
+    
     const text = selection.toString().trim();
     
     if (!text) {
@@ -142,17 +135,23 @@ function handleSelection() {
       selectionButton = document.createElement('button');
       selectionButton.className = 'promptserver-save-btn selection-mode';
       selectionButton.title = 'Save selected prompt to Library';
-      selectionButton.innerHTML = `
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; vertical-align: middle;">
-          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-          <polyline points="17 21 17 13 7 13 7 21"></polyline>
-          <polyline points="7 3 7 8 15 8"></polyline>
-        </svg>
-        <span>Save Selection</span>
-      `;
-      document.body.appendChild(selectionButton);
       
-      // Prevent button click from clearing the selection immediately
+      const iconSpan = document.createElement('span');
+      iconSpan.textContent = '💾 ';
+      
+      const textSpan = document.createElement('span');
+      textSpan.textContent = 'Save Selection';
+      
+      selectionButton.appendChild(iconSpan);
+      selectionButton.appendChild(textSpan);
+      
+      try {
+        document.body.appendChild(selectionButton);
+      } catch (err) {
+        console.warn("PromptServer: Failed to append selection button to body.");
+        return;
+      }
+      
       selectionButton.addEventListener('mousedown', (e) => {
         e.preventDefault();
       });
@@ -164,8 +163,7 @@ function handleSelection() {
         const selectedText = window.getSelection().toString().trim();
         if (!selectedText) return;
         
-        const label = selectionButton.querySelector('span');
-        label.textContent = 'Saving...';
+        textSpan.textContent = 'Saving...';
         selectionButton.disabled = true;
 
         chrome.runtime.sendMessage({
@@ -175,19 +173,19 @@ function handleSelection() {
         }, (response) => {
           selectionButton.disabled = false;
           if (response && response.success) {
-            label.textContent = 'Saved!';
+            textSpan.textContent = 'Saved!';
             selectionButton.classList.add('success');
             setTimeout(() => {
-              label.textContent = 'Save Selection';
+              textSpan.textContent = 'Save Selection';
               selectionButton.classList.remove('success');
               window.getSelection().removeAllRanges();
               selectionButton.style.display = 'none';
             }, 1500);
           } else {
-            label.textContent = 'Failed';
+            textSpan.textContent = 'Failed';
             selectionButton.classList.add('error');
             setTimeout(() => {
-              label.textContent = 'Save Selection';
+              textSpan.textContent = 'Save Selection';
               selectionButton.classList.remove('error');
             }, 1500);
           }
@@ -200,34 +198,35 @@ function handleSelection() {
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect();
       
-      // Only show if the selection is actually visible/valid
       if (rect.width > 0 && rect.height > 0) {
         selectionButton.style.display = 'inline-flex';
         selectionButton.style.position = 'fixed';
-        selectionButton.style.top = \`\${rect.bottom + 10}px\`;
-        selectionButton.style.left = \`\${Math.max(10, rect.left + (rect.width / 2) - 60)}px\`;
+        // Add robust positioning bounds
+        const topPos = Math.min(window.innerHeight - 50, rect.bottom + 10);
+        const leftPos = Math.max(10, Math.min(window.innerWidth - 120, rect.left + (rect.width / 2) - 60));
+        
+        selectionButton.style.top = topPos + 'px';
+        selectionButton.style.left = leftPos + 'px';
         selectionButton.style.zIndex = '999999';
       }
     } catch (e) {
       selectionButton.style.display = 'none';
     }
-  }, 10);
+  }, 50); // Slightly longer timeout to let DOM settle
 }
 
-document.addEventListener('mouseup', handleSelection);
+// Use capture phase to ensure we catch these events even if page calls stopPropagation
+document.addEventListener('mouseup', handleSelection, true);
 document.addEventListener('keyup', (e) => {
   if (e.key === 'Shift' || e.key.startsWith('Arrow')) {
     handleSelection();
   }
-});
+}, true);
 
-// Hide button when clicking outside
 document.addEventListener('mousedown', (e) => {
   if (selectionButton && !selectionButton.contains(e.target)) {
-    // We don't hide immediately to allow selection to form,
-    // but if the user clicks away, the selectionchange/mouseup will handle it
-    // because window.getSelection() will be empty.
+    // Hide logic handled by mouseup/selectionchange
   }
-});
+}, true);
 
-console.log('PromptServer Copilot content script active (History + Selection Mode).');
+console.log('PromptServer Copilot content script active (Safe DOM Mode).');
