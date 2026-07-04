@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "PromptServer Copilot",
+  "version": "1.0.0",
+  "description": "Saves prompt templates directly from Grok, ChatGPT, and Claude to your PromptServer library.",
+  "permissions": [
+    "storage"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://grok.com/*",
+        "https://*.grok.x.ai/*",
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://claude.ai/*"
+      ],
+      "js": [
+        "content-ai.js"
+      ],
+      "css": [
+        "styles.css"
+      ]
+    },
+    {
+      "matches": [
+        "http://localhost:5173/*",
+        "http://127.0.0.1:5173/*"
+      ],
+      "js": [
+        "content-web.js"
+      ],
+      "run_at": "document_end"
+    }
+  ]
+}

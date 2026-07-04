@@ -34,9 +34,18 @@ export default function App() {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
-  // Load prompts initially
+  // Load prompts initially and listen for browser extension sync events
   useEffect(() => {
     setPrompts(getPrompts());
+
+    const handleSync = (e) => {
+      setPrompts(getPrompts());
+      const count = e.detail?.count || 1;
+      addToast(`Synced ${count} prompt${count > 1 ? 's' : ''} from extension!`, 'success');
+    };
+
+    window.addEventListener('prompt-server-sync', handleSync);
+    return () => window.removeEventListener('prompt-server-sync', handleSync);
   }, []);
 
   const addToast = (message, type = 'success') => {

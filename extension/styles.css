@@ -1,0 +1,69 @@
+/* styles.css - Injected save button styles for ChatGPT, Claude, and Grok */
+
+.promptserver-save-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgb(25, 26, 32);
+  color: rgb(226, 227, 233);
+  border: 1px solid rgb(50, 52, 65);
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+  user-select: none;
+  line-height: 1;
+}
+
+.promptserver-save-btn:hover {
+  background-color: rgb(35, 37, 46);
+  border-color: rgb(139, 92, 246); /* PromptServer primary purple glow */
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
+}
+
+.promptserver-save-btn:active {
+  transform: scale(0.95);
+}
+
+.promptserver-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Success state when saved */
+.promptserver-save-btn.success {
+  background-color: rgba(16, 185, 129, 0.1) !important;
+  color: #34d399 !important;
+  border-color: #10b981 !important;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}
+
+/* Error state when failed */
+.promptserver-save-btn.error {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+  color: #f87171 !important;
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+}
+
+/* Adjust light theme adaptations for OpenAI light mode */
+@media (prefers-color-scheme: light) {
+  /* Only target light theme if the site does not force dark mode */
+  .promptserver-save-btn {
+    background-color: #ffffff;
+    color: #475569;
+    border-color: #e2e8f0;
+  }
+  .promptserver-save-btn:hover {
+    background-color: #f8fafc;
+    border-color: #7c3aed;
+    color: #0f172a;
+    box-shadow: 0 0 10px rgba(124, 58, 237, 0.2);
+  }
+}
