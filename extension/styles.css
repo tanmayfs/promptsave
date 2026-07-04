@@ -67,3 +67,28 @@
     box-shadow: 0 0 10px rgba(124, 58, 237, 0.2);
   }
 }
+
+/* History Mode Specific Styles */
+.promptserver-save-btn.history-mode {
+  position: absolute;
+  top: 8px;
+  right: -40px; /* Shift to the right of the message container */
+  padding: 6px;
+  border-radius: 50%; /* Make it circular */
+  opacity: 0; /* Hide by default */
+  transform: translateX(-10px);
+}
+
+/* Show button when hovering over the message container */
+*:hover > .promptserver-save-btn.history-mode,
+.promptserver-save-btn.history-mode:hover {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.promptserver-save-btn.history-mode.saving,
+.promptserver-save-btn.history-mode.success,
+.promptserver-save-btn.history-mode.error {
+  opacity: 1;
+  transform: translateX(0);
+}
