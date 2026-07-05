@@ -35,8 +35,19 @@ export default function App() {
   };
 
   // Load prompts initially
+  // Load prompts initially
   useEffect(() => {
-    setPrompts(getPrompts());
+    getPrompts().then(setPrompts);
+
+    const handleSync = async (e) => {
+      const data = await getPrompts();
+      setPrompts(data);
+      const count = e.detail?.count || 1;
+      addToast(`Synced ${count} prompt${count > 1 ? 's' : ''} from extension!`, 'success');
+    };
+
+    window.addEventListener('prompt-server-sync', handleSync);
+    return () => window.removeEventListener('prompt-server-sync', handleSync);
   }, []);
 
   const addToast = (message, type = 'success') => {
@@ -48,15 +59,15 @@ export default function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  const handleCreatePrompt = (title, content, tags) => {
-    const updated = addPrompt(title, content, tags);
+  const handleCreatePrompt = async (title, content, tags) => {
+    const updated = await addPrompt(title, content, tags);
     setPrompts(updated);
     addToast('Saved to library', 'success');
     setCurrentView('library');
   };
 
-  const handleUpdatePrompt = (id, title, content, tags) => {
-    const updated = updatePrompt(id, title, content, tags);
+  const handleUpdatePrompt = async (id, title, content, tags) => {
+    const updated = await updatePrompt(id, title, content, tags);
     setPrompts(updated);
     addToast('Edited', 'success');
     
@@ -65,8 +76,8 @@ export default function App() {
     setSelectedPrompt(newActivePrompt);
   };
 
-  const handleRestoreVersion = (promptId, versionId) => {
-    const updated = restoreVersion(promptId, versionId);
+  const handleRestoreVersion = async (promptId, versionId) => {
+    const updated = await restoreVersion(promptId, versionId);
     setPrompts(updated);
     addToast('Version restored!', 'success');
     
@@ -75,8 +86,8 @@ export default function App() {
     setSelectedPrompt(newActivePrompt);
   };
 
-  const handleDeletePrompt = (id) => {
-    const updated = deletePrompt(id);
+  const handleDeletePrompt = async (id) => {
+    const updated = await deletePrompt(id);
     setPrompts(updated);
     addToast('Removed from library', 'danger');
     if (selectedPrompt && selectedPrompt.id === id) {
@@ -84,14 +95,14 @@ export default function App() {
     }
   };
 
-  const handleRestorePrompt = (id) => {
-    const updated = restorePrompt(id);
+  const handleRestorePrompt = async (id) => {
+    const updated = await restorePrompt(id);
     setPrompts(updated);
     addToast('Restored to library', 'success');
   };
 
-  const handleDeletePermanently = (id) => {
-    const updated = deletePromptPermanently(id);
+  const handleDeletePermanently = async (id) => {
+    const updated = await deletePromptPermanently(id);
     setPrompts(updated);
     addToast('Deleted permanently', 'danger');
   };
